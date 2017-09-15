@@ -1,3 +1,4 @@
+import cookie from 'react-cookies'
 import React, { Component, PropTypes } from 'react';
 import DropdownMenu from 'react-dd-menu';
 import ImmutablePropTypes from 'react-immutable-proptypes';
@@ -19,10 +20,19 @@ export default class Configuration extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            isMenuOpen: false
+            isMenuOpen: false,
+            userName: cookie.load('db-connector-user')
         }
         this.toggle = this.toggle.bind(this);
         this.close = this.close.bind(this);
+        this.logOut = this.logOut.bind(this);
+
+    }
+
+    componentDidUpdate() {
+      this.setState({
+        userName: cookie.load('db-connector-user')
+      });
     }
 
     toggle() {
@@ -33,6 +43,18 @@ export default class Configuration extends Component {
         this.setState({ isMenuOpen: false });
     }
 
+    logOut() {
+
+      // Delete all the cookies and reset user state. This does not kill
+      // any running connections, but user will not be able to access them
+      // without logging in again.
+      cookie.remove('db-connector-user');
+      cookie.remove('plotly-auth-token');
+      cookie.remove('db-connector-auth-token');
+      this.setState({ userName: ''});
+      window.location.assign('/');
+    }
+
     render() {
         const menuOptions = {
             isOpen: this.state.isMenuOpen,
@@ -41,6 +63,15 @@ export default class Configuration extends Component {
             align: 'right',
             animate: false
         };
+        const loginMessage = this.state.userName ?
+                            <div>
+                                Logged in as "{this.state.userName}" &nbsp;
+                                <Link className={styles.supportLinks} onClick={this.logOut} >
+                                    Log Out
+                                </Link>
+                            </div>
+                            :
+                            <Link className={styles.supportLinks} href="/">Log In</Link>;
 
         return (
             <div className="fullApp">
