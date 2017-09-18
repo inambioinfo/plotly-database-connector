@@ -7,6 +7,7 @@ import fetch from 'node-fetch';
 const ESCAPED_ROUTES = [
   new RegExp('^/$'),
   new RegExp('^/static/'),
+  new RegExp('^/settings'),
   new RegExp('^/oauth2/token'),
   new RegExp('^/oauth2/callback')
 ]
