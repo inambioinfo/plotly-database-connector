@@ -56,3 +56,23 @@
     cursor: pointer;
     text-align: center;
 }
+
+.loginPage {
+    width: 80%;
+    background-color: white;
+    border: thin lightgrey solid;
+    border-radius: 5px;
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+    min-width: 800px;
+}
+
+.inputLabel {
+  height: 60px;
+}
+
+.signupMessage {
+  marginTop: '30px';
+  textAlign: 'center';
+}

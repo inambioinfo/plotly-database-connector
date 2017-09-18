@@ -1,3 +1,4 @@
+import cookie from 'react-cookies'
 import fetch from 'isomorphic-fetch';
 import React, {Component} from 'react';
 import {render} from 'react-dom';
@@ -52,24 +53,24 @@ class Login extends Component {
         this.buildOauthUrl = this.buildOauthUrl.bind(this);
         this.oauthPopUp = this.oauthPopUp.bind(this);
         this.logIn = this.logIn.bind(this);
-        this.checkAnyUserAccountIsSaved = this.checkAnyUserAccountIsSaved.bind(this);
-    }
-
-    componentWillReceiveProps(nextProps) {
-        this.checkAnyUserAccountIsSaved().then(isSaved => {
-            if (isSaved) {
-                window.location.assign(connectorUrl);
-            }
-        });
     }
 
     componentDidMount() {
-        this.checkAnyUserAccountIsSaved().then(isSaved => {
-            if (isSaved) {
-                window.location.assign(connectorUrl);
-            }
-        });
+        const userName = cookie.load('db-connector-user');
+
+        if (userName) {
+          window.location.assign(connectorUrl);
+        }
     }
+
+    componentDidUpdate() {
+        const userName = cookie.load('db-connector-user');
+
+        if (userName) {
+          window.location.assign(connectorUrl);
+        }
+    }
+
 
     buildOauthUrl() {
         const oauthClientId = 'isFcew9naom2f1khSiMeAtzuOvHXHuLwhPsM7oPt';
@@ -100,36 +101,13 @@ class Login extends Component {
         }
     }
 
-    checkAnyUserAccountIsSaved() {
-        return fetch(`${baseUrlWrapped}/settings`, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        }).then((res) => res.json().then((json) => {
-            if (res.status !== 200) {
-                this.setState({
-                    status: 'failure',
-                    statusMessage: json.error.message
-                });
-                this.setState({loggedIn: false});
-                return false;
-            }
-            const userAccountIsSaved = json.USERS.length > 0;
-            console.warn('userAccountIsSaved: ', userAccountIsSaved);
-            this.setState({loggedIn: userAccountIsSaved});
-            return userAccountIsSaved;
-        })).catch((e) => {
-            this.setState({loggedIn: false});
-            return false;
-        });
-    }
-
     logIn () {
         const {domain, serverType, username} = this.state;
 
         this.setState({status: '', statusMessage: ''});
+
+        let PLOTLY_API_SSL_ENABLED = true;
+        let PLOTLY_API_DOMAIN = '';
 
         if (!username) {
             this.setState({
@@ -139,23 +117,21 @@ class Login extends Component {
             return;
         }
         if (serverType === ONPREM) {
-            if (!domain) {
-                this.setState({
-                    status: 'failure',
-                    statusMessage: 'Enter your Plotly On Premise domain.'
-                });
-                return;
-            } else if (!(domain.startsWith('http://') ||
-                         domain.startsWith('https://'))) {
 
+            if (domain.startsWith('http://')) {
+                PLOTLY_API_SSL_ENABLED = false;
+                PLOTLY_API_DOMAIN = domain.replace('http://', '');
+            } else if (domain.startsWith('https://')) {
+                PLOTLY_API_SSL_ENABLED = true;
+                PLOTLY_API_DOMAIN = domain.replace('https://', '');
+            } else {
                 this.setState({
                     status: 'failure',
                     statusMessage: (
-                        'The Plotly domain must start with "http://" or "https://"'
+                        'Please enter a valid Plotly Domain.'
                     )
                 });
                 return;
-
             }
         }
 
@@ -168,89 +144,47 @@ class Login extends Component {
                     <div>
                         {`You may be redirected to ${domain ? domain : 'https://plot.ly'} and asked to log in.`}
                     </div>
-
-                    <div style={{
-                        'marginTop': '14px',
-                        'fontStyle': 'italic',
-                        'textAlign': 'left',
-                        'fontSize': '10px',
-                        'marginLeft': '10px',
-                        'marginRight': '10px',
-                        'border': 'thin lightgrey solid',
-                        'borderLeft': 'none',
-                        'borderRight': 'none'
-                    }}>
-                        {`(If a login or authorization window does not pop up, visit `}
-                        <div>
-                            <Link href={this.buildOauthUrl()}>
-                                {this.buildOauthUrl()}
-                            </Link>
-                        </div>
-                        {` in your web browser.)`}
-                    </div>
-
+                    <hr />
+                    {`(If a login or authorization window does not pop up, visit: `}
+                      <br /><Link href={this.buildOauthUrl()}>
+                          {this.buildOauthUrl()}
+                      </Link><br />
+                    {` in your web browser.)`}
+                   <hr />
                 </div>
             )
         });
-
-        const repeatedlyCheckIfLoggedIn = () => {
-            const checkAuth = setInterval(() => {
-                this.checkAnyUserAccountIsSaved().then(isLoggedIn => {
-                    if (isLoggedIn) {
-                        clearInterval(checkAuth);
-                        window.location.assign(connectorUrl);
-                    }
-                });
-            }, 1000);
-        }
 
         /*
          * If the user is on-prem, then set the domain as a setting,
          * and after that's done send them through the oauth redirect.
          */
-        this.checkAnyUserAccountIsSaved().then(isLoggedIn => {
-            if (!isLoggedIn) {
-                if (this.state.serverType === ONPREM) {
-                    let PLOTLY_API_SSL_ENABLED;
-                    let PLOTLY_API_DOMAIN;
-                    if (domain.startsWith('https://')) {
-                        PLOTLY_API_SSL_ENABLED = true;
-                        PLOTLY_API_DOMAIN = domain.replace('https://', '');
-                    } else {
-                        PLOTLY_API_SSL_ENABLED = false;
-                        PLOTLY_API_DOMAIN = domain.replace('http://', '');
-                    }
-                    return fetch(`${baseUrlWrapped}/settings`, {
-                        method: 'PATCH',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            PLOTLY_API_DOMAIN, PLOTLY_API_SSL_ENABLED
-                        })
-                    }).then(res => {
-                        if (res.status === 200) {
-                            this.oauthPopUp();
-                            repeatedlyCheckIfLoggedIn();
-                        } else {
-                            this.setState({
-                                status: 'failure',
-                                statusMessage: (
-                                    'There was an error while trying to log in. '+
-                                    'Try restarting the app and trying again.'
-                                )
-                            });
-                        }
-                    }).catch(console.error);
-                } else {
+        if (this.state.serverType === ONPREM) {
+            return fetch(`${baseUrlWrapped}/settings`, {
+                method: 'PATCH',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    PLOTLY_API_DOMAIN, PLOTLY_API_SSL_ENABLED
+                })
+            }).then(res => {
+                if (res.status === 200) {
                     this.oauthPopUp();
-                    repeatedlyCheckIfLoggedIn();
+                } else {
+                    this.setState({
+                        status: 'failure',
+                        statusMessage: (
+                            'There was an error while trying to log in. '+
+                            'Try restarting the app and trying again.'
+                        )
+                    });
                 }
-            } else {
-                window.location.assign(connectorUrl);
-            }
-        }).catch(console.error);
+            }).catch(console.error);
+        } else {
+            this.oauthPopUp();
+        }
 
     }
 
@@ -258,16 +192,7 @@ class Login extends Component {
     render() {
 
         return (
-            <div style={{
-                'width': '80%',
-                'backgroundColor': 'white',
-                'border': 'thin lightgrey solid',
-                'borderRadius': '5px',
-                'textAlign': 'center',
-                'marginLeft': 'auto',
-                'marginRight': 'auto',
-                'minWidth': '800px'
-            }}>
+            <div className="loginPage">
                 <h2>
                     {'Plotly Database Connector'}
                 </h2>
@@ -276,7 +201,7 @@ class Login extends Component {
                 </h4>
 
                 <div>
-                    <div style={{'height': 60}}>
+                    <div className="inputLabel">
                         <label>Connect to Plotly Cloud</label>
                         <input
                             type="radio"
@@ -285,7 +210,7 @@ class Login extends Component {
                         />
                     </div>
 
-                    <div style={{'height': 60}}>
+                    <div className="inputLabel">
                         <label>Connect to <Link href="https://plot.ly/products/on-premise/">Plotly On-Premise</Link></label>
                         <input
                             type="radio"
@@ -296,7 +221,7 @@ class Login extends Component {
 
                     {
                         this.state.serverType == ONPREM ? (
-                            <div style={{'height': 60}}>
+                            <div className="inputLabel">
                                 <label>Your Plotly On-Premise Domain</label>
                                 <input
                                     type="text"
@@ -309,7 +234,7 @@ class Login extends Component {
                         ) : null
                     }
 
-                    <div style={{'height': 60}}>
+                    <div className="inputLabel">
                         <label>Your Plotly Username</label>
                         <input
                             id="test-username"
@@ -328,11 +253,11 @@ class Login extends Component {
                     </button>
                 </div>
 
-                <div style={{textAlign: 'center'}}>
+                <div className="signupMessage">
                     {this.state.statusMessage}
                 </div>
 
-                <div style={{'marginTop': '30px'}}>
+                <div className="signupMessage">
                     <span>
                         {`The Plotly Database Connector requires a Plotly login to use.
                           Don't have an account yet?`}

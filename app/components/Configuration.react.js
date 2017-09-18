@@ -66,12 +66,12 @@ export default class Configuration extends Component {
         const loginMessage = this.state.userName ?
                             <div>
                                 Logged in as "{this.state.userName}" &nbsp;
-                                <Link className={styles.supportLinks} onClick={this.logOut} >
+                                <Link className="supportLinks" onClick={this.logOut} >
                                     Log Out
                                 </Link>
                             </div>
                             :
-                            <Link className={styles.supportLinks} href="/">Log In</Link>;
+                            <Link className="supportLinks" href="/">Log In</Link>;
 
         return (
             <div className="fullApp">
