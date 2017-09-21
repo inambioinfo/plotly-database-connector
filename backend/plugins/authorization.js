@@ -16,7 +16,8 @@ function accessTokenIsValid(access_token) {
     return getSetting('ACCESS_TOKEN') === access_token;
 }
 
-export function PlotlyOAuth(options) {
+export function PlotlyOAuth(electronWindow) {
+    const window = electronWindow;
 
     function isAuthorized(req, res, next) {
         let path = req.href();
@@ -26,6 +27,10 @@ export function PlotlyOAuth(options) {
           return (next());
         }
 
+        // No Auth for electron apps:
+        if (window) {
+          return (next());          
+        }
         if (!accessTokenIsValid(req.cookies['db-connector-auth-token'])) {
 
             if (!req.cookies['plotly-auth-token']) {
