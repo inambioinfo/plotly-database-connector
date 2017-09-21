@@ -22,6 +22,9 @@ export function PlotlyOAuth(electronWindow) {
     function isAuthorized(req, res, next) {
         let path = req.href();
 
+        if (!getSetting('AUTH_ENABLED')) {
+          return (next());
+        }
         // Auth is disabled for certain urls:
         if ( ESCAPED_ROUTES.some(path.match.bind(path)) ) {
           return (next());
@@ -29,7 +32,7 @@ export function PlotlyOAuth(electronWindow) {
 
         // No Auth for electron apps:
         if (window) {
-          return (next());          
+          return (next());
         }
         if (!accessTokenIsValid(req.cookies['db-connector-auth-token'])) {
 
