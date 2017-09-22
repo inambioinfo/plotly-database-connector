@@ -40,7 +40,8 @@ describe('plotly database connector', function() {
                     .forBrowser('electron')
                     .build();
 
-                // wait for electron app to start up
+                //navigate to connections page and wait for electron app to start up
+                this.driver.navigate().to('http://localhost:9494/database-connector');
                 return delay(3 * 1000);
             })
             // ensure the electron app has loaded
@@ -90,6 +91,11 @@ function saveCredentials() {
         settings.getSetting('SETTINGS_PATH'),
         `USERS: ${usersValue}`
     );
+    fs.writeFileSync(
+        settings.getSetting('SETTINGS_PATH'),
+        'AUTH_ENABLED: false'
+    );
+
 }
 
 function clearConnectorFolder() {
